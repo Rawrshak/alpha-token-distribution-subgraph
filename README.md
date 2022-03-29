@@ -21,6 +21,7 @@ Note: Bug Bounty and Feedback Rewards are subject to be distributed at the Rawrs
 We will take a snapshot of the user accounts data on March 31st, 2022. We will distribute the tokens based on a user's share of the total amount per category.
 
 Category | RAWR Token amount
+------ | ------
 Unique Asset Count | 50,000
 Days Active | 25,000
 Orders Created Count | 50,000
