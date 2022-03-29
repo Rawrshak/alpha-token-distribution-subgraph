@@ -11,6 +11,20 @@ type Exchange @entity {
 
 type ContentFactory @entity {
   id: ID!
+  contents: [Content!] @derivedFrom(field: "factory")
+}
+
+type ContentStatisticsManager @entity {
+  id: ID!
+  contentsCount: BigInt!
+  assetsCount: BigInt!
+  accountsCount: BigInt!
+}
+
+type Content @entity {
+  id: ID!
+  factory: ContentFactory!
+  assetsCount: BigInt!
 }
 
 type Account @entity {
@@ -69,10 +83,16 @@ enum OrderStatus {
   Claimed
 }
 
-
 type Asset @entity {
   id: ID!
   tokenId: BigInt!
-  parentContract: Bytes!
+  parentContract: Content!
   orders: [Order!] @derivedFrom(field: "asset")
+}
+
+type AssetBalance @entity {
+  id: ID!
+  asset: Asset!
+  owner: Account!
+  amount: BigInt!
 }

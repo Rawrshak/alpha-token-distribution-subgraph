@@ -72,3 +72,23 @@ templates:
       eventHandlers:
         - event: ContractsDeployed(indexed address,indexed address)
           handler: handleContractsDeployed
+  - name: Content
+    kind: ethereum/contract
+    network: {{network}}
+    source:
+      abi: Content
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/subgraph.ts
+      entities:
+        - Content
+      abis:
+        - name: Content
+          file: ./abis/Content.json
+      eventHandlers:
+        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
+          handler: handleTransferBatch
+        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleTransferSingle
