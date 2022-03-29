@@ -9,6 +9,7 @@ The data used to get these calculations are from the contracts from the alpha te
 The distribution is as below, with the assumption of 500,000 RAWR tokens (0.5% of 100,000,000 max supply):
 
 Users | Amount
+------ | ------
 Gamers and Asset holders | 250,000 RAWR
 Content Creators and Asset Creators | 125,000 RAWR
 Rawrshak Event participants | 75,000 RAWR
