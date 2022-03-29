@@ -18,11 +18,14 @@ dataSources:
       entities:
         - AddressResolver
         - Exchange
+        - ContentFactory
       abis:
         - name: AddressResolver
           file: ./abis/AddressResolver.json
         - name: Exchange
           file: ./abis/Exchange.json
+        - name: ContentFactory
+          file: ./abis/ContentFactory.json
       eventHandlers:
         - event: AddressRegistered(indexed bytes4,indexed address)
           handler: handleAddressRegistered
@@ -51,3 +54,21 @@ templates:
           handler: handleOrdersDeleted
         - event: OrdersClaimed(indexed address,uint256[])
           handler: handleOrdersClaimed
+  - name: ContentFactory
+    kind: ethereum/contract
+    network: mainnet
+    source:
+      abi: ContentFactory
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/subgraph.ts
+      entities:
+        - ContentFactory
+      abis:
+        - name: ContentFactory
+          file: ./abis/ContentFactory.json
+      eventHandlers:
+        - event: ContractsDeployed(indexed address,indexed address)
+          handler: handleContractsDeployed

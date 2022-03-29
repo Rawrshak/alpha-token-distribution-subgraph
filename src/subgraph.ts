@@ -4,6 +4,7 @@ import { ADDRESS_ZERO, ONE_BI, ZERO_BI } from "./constants";
 import { 
     AddressResolver as Resolver,
     Exchange,
+    ContentFactory,
     Account,
     Order,
     OrderClaimTransaction,
@@ -25,7 +26,13 @@ import {
 } from "../generated/templates/Exchange/Exchange";
 
 import {
-    Exchange as ExchangeTemplate
+  ContentFactory as ContentFactoryContract,
+  ContractsDeployed as ContractsDeployedEvent
+} from "../generated/templates/ContentFactory/ContentFactory";
+
+import {
+    Exchange as ExchangeTemplate,
+    ContentFactory as ContentFactoryTemplate
 } from '../generated/templates';
 
 export function handleAddressRegistered(event: AddressRegisteredEvent): void {
@@ -44,25 +51,37 @@ export function handleAddressRegistered(event: AddressRegisteredEvent): void {
             resolver.exchange = exchange.id;
             resolver.save();
         }
+    } else if (event.params.id.toHexString() == "0xdb337f7d") {
+        // ContentFactory Hash = 0xdb337f7d
+        // Start Listening for Content Factory events and create Content Factory Entity
+        ContentFactoryTemplate.create(event.params.contractAddress);
+        let contentFactory = ContentFactory.load(event.params.contractAddress.toHexString());
+        if (contentFactory == null) {
+            contentFactory = new ContentFactory(event.params.contractAddress.toHexString());
+            contentFactory.save();
+        }
     } else {
         log.info('-------- LOG: Resolver - Ignoring registered address: {}', [event.params.id.toHexString()]);
     }
 }
+export function handleContractsDeployed(event: ContractsDeployedEvent): void {
+    // Todo:
+}
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
-
+    // Todo:
 }
 
 export function handleOrdersFilled(event: OrdersFilledEvent): void {
-
+    // Todo:
 }
 
 export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
-
+    // Todo:
 }
 
 export function handleOrdersClaimed(event: OrdersClaimedEvent): void {
-    
+    // Todo:
 }
 
 function createAddressResolver(id: Address): Resolver {

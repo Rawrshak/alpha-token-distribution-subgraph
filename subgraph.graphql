@@ -9,6 +9,10 @@ type Exchange @entity {
   OrderFillsCount: BigInt!
 }
 
+type ContentFactory @entity {
+  id: ID!
+}
+
 type Account @entity {
   id: ID!
   ordersCount: BigInt!
@@ -19,6 +23,7 @@ type Account @entity {
   volumeAsBuyer: BigInt!
   volumeAsSeller: BigInt!
   daysActive: BigInt!
+  uniqueAssetsCount: BigInt!
 }
 
 type Order @entity {
