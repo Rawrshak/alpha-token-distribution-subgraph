@@ -1,0 +1,53 @@
+specVersion: 0.0.2
+description: Rawrshak Network
+repository: https://github.com/Rawrshak/Subgraphs
+schema:
+  file: ./subgraph.graphql
+dataSources:
+  - name: AddressResolver
+    kind: ethereum/contract
+    network: {{network}}
+    source:
+      address: '{{address-resolver-address}}'
+      abi: AddressResolver
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/subgraph.ts
+      entities:
+        - AddressResolver
+        - Exchange
+      abis:
+        - name: AddressResolver
+          file: ./abis/AddressResolver.json
+        - name: Exchange
+          file: ./abis/Exchange.json
+      eventHandlers:
+        - event: AddressRegistered(indexed bytes4,indexed address)
+          handler: handleAddressRegistered
+templates:
+  - name: Exchange
+    kind: ethereum/contract
+    network: {{network}}
+    source:
+      abi: Exchange
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/subgraph.ts
+      entities:
+        - Exchange
+      abis:
+        - name: Exchange
+          file: ./abis/Exchange.json
+      eventHandlers:
+        - event: OrderPlaced(indexed address,indexed uint256,((address,uint256),address,address,uint256,uint256,bool))
+          handler: handleOrderPlaced
+        - event: OrdersFilled(indexed address,uint256[],uint256[],(address,uint256),address,uint256,uint256)
+          handler: handleOrdersFilled
+        - event: OrdersDeleted(indexed address,uint256[])
+          handler: handleOrdersDeleted
+        - event: OrdersClaimed(indexed address,uint256[])
+          handler: handleOrdersClaimed

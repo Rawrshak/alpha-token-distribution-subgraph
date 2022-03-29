@@ -1,0 +1,73 @@
+type AddressResolver @entity {
+  id: ID!
+  exchange: Exchange!
+}
+
+type Exchange @entity {
+  id: ID!
+  OrdersCount: BigInt!
+  OrderFillsCount: BigInt!
+}
+
+type Account @entity {
+  id: ID!
+  ordersCount: BigInt!
+  orderFillsCount: BigInt!
+  cancelledOrdersCount: BigInt!
+  claimedOrdersCount: BigInt!
+  volume: BigInt!
+  volumeAsBuyer: BigInt!
+  volumeAsSeller: BigInt!
+  daysActive: BigInt!
+}
+
+type Order @entity {
+  id: ID!
+  exchange: Exchange!
+  asset: Asset!
+  owner: Account!
+  type: OrderType!
+  price: BigInt!
+  amountOrdered: BigInt!
+  amountFilled: BigInt!
+  amountClaimed: BigInt!
+  status: OrderStatus!
+  claimOrderTransactions: [OrderClaimTransaction!] @derivedFrom(field: "order")
+  claimOrdersCount: BigInt!
+  orderFills: [OrderFill!] @derivedFrom(field: "order")
+}
+
+type OrderClaimTransaction @entity {
+  id: ID!
+  order: Order!
+  amountClaimed: BigInt!
+}
+
+type OrderFill @entity {
+  id: ID!
+  filler: Account!
+  order: Order!
+  amount: BigInt!
+  exchange: Exchange!
+}
+
+enum OrderType {
+  Buy
+  Sell
+}
+
+enum OrderStatus {
+  Ready
+  PartiallyFilled
+  Filled
+  Cancelled
+  Claimed
+}
+
+
+type Asset @entity {
+  id: ID!
+  tokenId: BigInt!
+  parentContract: Bytes!
+  orders: [Order!] @derivedFrom(field: "asset")
+}

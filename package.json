@@ -1,0 +1,30 @@
+{
+  "name": "alpha-rawr-token-distribution",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/Rawrshak/alpha-token-distribution-subgraph.git",
+  "author": "Christian Sumido <gcbsumid@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "docker-up": "cd docker && docker-compose up",
+    "docker-up:clean": "cd docker && rmdir /S data && docker-compose up",
+    "prepare:local": "mustache config/local.json subgraph.template.yaml > subgraph.yaml",
+    "prepare:optimism-kovan": "mustache config/optimism-kovan.json subgraph.template.yaml > subgraph.yaml",
+    "codegen": "graph codegen",
+    "codegen:subgraph": "npm run codegen -- subgraph.yaml",
+    "build": "graph build",
+    "build:subgraph": "graph build subgraph.yaml",
+    "create:subgraph": "graph create gcbsumid/alpha-rawr-distribution --node https://api.thegraph.com/deploy/",
+    "deploy:subgraph": "graph deploy gcbsumid/alpha-rawr-distribution subgraph.yaml --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/",
+    "create-local:subgraph": "graph create --node http://localhost:8020/ gcbsumid/alpha-rawr-distribution",
+    "remove-local:subgraph": "graph remove --node http://localhost:8020/ gcbsumid/alpha-rawr-distribution",
+    "deploy-local:subgraph": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 gcbsumid/alpha-rawr-distribution subgraph.yaml"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "^0.22.1"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.22.2",
+    "mustache": "^4.2.0"
+  }
+}
