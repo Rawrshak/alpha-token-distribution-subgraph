@@ -5,8 +5,12 @@ type AddressResolver @entity {
 
 type Exchange @entity {
   id: ID!
-  OrdersCount: BigInt!
-  OrderFillsCount: BigInt!
+  ordersCount: BigInt!
+  orderFillsCount: BigInt!
+  ordersClaimedCount: BigInt!
+  ordersCancelledCount: BigInt!
+  totalOrderMakerVolume: BigInt!
+  totalOrderTakerVolume: BigInt!
 }
 
 type ContentFactory @entity {
@@ -51,15 +55,7 @@ type Order @entity {
   amountFilled: BigInt!
   amountClaimed: BigInt!
   status: OrderStatus!
-  claimOrderTransactions: [OrderClaimTransaction!] @derivedFrom(field: "order")
-  claimOrdersCount: BigInt!
   orderFills: [OrderFill!] @derivedFrom(field: "order")
-}
-
-type OrderClaimTransaction @entity {
-  id: ID!
-  order: Order!
-  amountClaimed: BigInt!
 }
 
 type OrderFill @entity {

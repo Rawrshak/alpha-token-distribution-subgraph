@@ -66,9 +66,12 @@ templates:
       file: ./src/subgraph.ts
       entities:
         - ContentFactory
+        - ContentManager
       abis:
         - name: ContentFactory
           file: ./abis/ContentFactory.json
+        - name: ContentManager
+          file: ./abis/ContentManager.json
       eventHandlers:
         - event: ContractsDeployed(indexed address,indexed address)
           handler: handleContractsDeployed
@@ -92,3 +95,21 @@ templates:
           handler: handleTransferBatch
         - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
           handler: handleTransferSingle
+  - name: ContentStorage
+    kind: ethereum/contract
+    network: {{network}}
+    source:
+      abi: ContentStorage
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/subgraph.ts
+      entities:
+        - ContentStorage
+      abis:
+        - name: ContentStorage
+          file: ./abis/ContentStorage.json
+      eventHandlers:
+        - event: AssetsAdded(indexed address,uint256[],(string,string,uint256,address,uint24)[])
+          handler: handleAssetsAdded
