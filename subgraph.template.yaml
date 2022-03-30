@@ -56,7 +56,7 @@ templates:
           handler: handleOrdersClaimed
   - name: ContentFactory
     kind: ethereum/contract
-    network: mainnet
+    network: {{network}}
     source:
       abi: ContentFactory
     mapping:
