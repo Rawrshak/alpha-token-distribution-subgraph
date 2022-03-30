@@ -10,6 +10,7 @@ type Exchange @entity {
   ordersClaimedCount: BigInt!
   ordersCancelledCount: BigInt!
   orderVolume: BigInt!
+  totalUserActiveDays: BigInt!
 }
 
 type ContentFactory @entity {
@@ -38,8 +39,8 @@ type Account @entity {
   claimedOrdersCount: BigInt!
   makerVolume: BigInt!
   takerVolume: BigInt!
-  daysActive: BigInt!
   uniqueAssetsCount: BigInt!
+  daysActive: BigInt!
   lastActiveDate: BigInt!
 }
 

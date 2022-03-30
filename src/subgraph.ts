@@ -1,5 +1,5 @@
 import { log, ByteArray, BigInt, Address, crypto, store } from "@graphprotocol/graph-ts"
-import { ADDRESS_ZERO, ONE_BI, ZERO_BI } from "./constants";
+import { ADDRESS_ZERO, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
 
 import { 
     AddressResolver as Resolver,
@@ -267,7 +267,6 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
         ownerAcc = createAccount(event.params.order.owner, event.block.timestamp);
     }
     ownerAcc.ordersCount = ownerAcc.ordersCount.plus(ONE_BI);
-    ownerAcc.save();
     
     let exchange = Exchange.load(event.address.toHexString())!;
 
@@ -277,9 +276,18 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     order.price = event.params.order.price;
     order.amountOrdered = event.params.order.amount;
     order.save();
-    
+
     // Update exchange data
     exchange.ordersCount = exchange.ordersCount.plus(ONE_BI);
+
+    // Add new user active day
+    if (isNewDay(ownerAcc.lastActiveDate, event.block.timestamp)) {
+        ownerAcc.daysActive = ownerAcc.daysActive.plus(ONE_BI);
+        ownerAcc.lastActiveDate = event.block.timestamp;
+        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+    }
+    
+    ownerAcc.save();
     exchange.save();
 }
 
@@ -335,6 +343,14 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
         }
         order.save();
     }
+    
+    // Add new user active day
+    if (isNewDay(taker.lastActiveDate, event.block.timestamp)) {
+        taker.daysActive = taker.daysActive.plus(ONE_BI);
+        taker.lastActiveDate = event.block.timestamp;
+        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+    }
+
     taker.save();
     exchange.save();
 
@@ -361,6 +377,13 @@ export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
 
         order.amountClaimed = order.amountFilled;
         order.save();
+    }
+    
+    // Add new user active day
+    if (isNewDay(owner.lastActiveDate, event.block.timestamp)) {
+        owner.daysActive = owner.daysActive.plus(ONE_BI);
+        owner.lastActiveDate = event.block.timestamp;
+        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
     }
     
     owner.cancelledOrdersCount = owner.cancelledOrdersCount.plus(BigInt.fromI32(orderIds.length));
@@ -394,6 +417,14 @@ export function handleOrdersClaimed(event: OrdersClaimedEvent): void {
         }
         order.save();
     }
+    
+    // Add new user active day
+    if (isNewDay(owner.lastActiveDate, event.block.timestamp)) {
+        owner.daysActive = owner.daysActive.plus(ONE_BI);
+        owner.lastActiveDate = event.block.timestamp;
+        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+    }
+    
     owner.save();
     exchange.save();
 }
@@ -412,26 +443,12 @@ function createAccount(address: Address, timestamp: BigInt): Account {
     account.claimedOrdersCount = ZERO_BI;
     account.makerVolume = ZERO_BI;
     account.takerVolume = ZERO_BI;
-    account.daysActive = ONE_BI;
     account.uniqueAssetsCount = ZERO_BI;
+    account.daysActive = ONE_BI;
     account.lastActiveDate = timestamp;
     account.save();
     return account;
 }
-  
-// export function createAsset(id: string, parent: string, tokenId: BigInt): Asset {
-//     let asset = new Asset(id);
-//     asset.tokenId = tokenId;
-//     asset.parentContract = parent;
-//     asset.save();
-
-//     // Update Content asset count
-//     let content = Content.load(parent)!;
-//     content.assetsCount = content.assetsCount.plus(ONE_BI);
-//     content.save();
-
-//     return asset;
-// }
   
 function createAssetBalance(id: string, assetId: string, owner: string): AssetBalance {
     let asset = Asset.load(assetId)!;
@@ -443,7 +460,7 @@ function createAssetBalance(id: string, assetId: string, owner: string): AssetBa
     return balance;
 }
 
-export function createOrder(id: BigInt, assetId: string, owner: string, exchangeId: string): Order {
+function createOrder(id: BigInt, assetId: string, owner: string, exchangeId: string): Order {
     let order = new Order(id.toHexString());
     order.asset = assetId;
     order.exchange = exchangeId;
@@ -455,6 +472,17 @@ export function createOrder(id: BigInt, assetId: string, owner: string, exchange
     order.price = ZERO_BI;
     order.save();
     return order;
+}
+
+function isNewDay(lastActiveTimestamp: BigInt, currentTimestamp: BigInt): boolean {
+    let currentTimestampInt = currentTimestamp.toI32();
+    let currentDayId = currentTimestampInt / SECONDS_PER_DAY;
+    let lastActiveTimestampInt = lastActiveTimestamp.toI32();
+    let lastActiveDayId = lastActiveTimestampInt / SECONDS_PER_DAY;
+    if (lastActiveDayId < currentDayId) {
+        return true;
+    }
+    return false;
 }
 
 function getAssetId(content: string, tokenId: string): string {
@@ -481,6 +509,7 @@ function createExchange(address: Address): Exchange {
     exchange.ordersClaimedCount = ZERO_BI;
     exchange.ordersCancelledCount = ZERO_BI;
     exchange.orderVolume = ZERO_BI;
+    exchange.totalUserActiveDays = ZERO_BI;
     exchange.save();
     return exchange;
 }
