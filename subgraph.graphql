@@ -9,8 +9,7 @@ type Exchange @entity {
   orderFillsCount: BigInt!
   ordersClaimedCount: BigInt!
   ordersCancelledCount: BigInt!
-  totalOrderMakerVolume: BigInt!
-  totalOrderTakerVolume: BigInt!
+  orderVolume: BigInt!
 }
 
 type ContentFactory @entity {
@@ -37,11 +36,11 @@ type Account @entity {
   orderFillsCount: BigInt!
   cancelledOrdersCount: BigInt!
   claimedOrdersCount: BigInt!
-  volume: BigInt!
-  volumeAsBuyer: BigInt!
-  volumeAsSeller: BigInt!
+  makerVolume: BigInt!
+  takerVolume: BigInt!
   daysActive: BigInt!
   uniqueAssetsCount: BigInt!
+  lastActiveDate: BigInt!
 }
 
 type Order @entity {
@@ -55,15 +54,6 @@ type Order @entity {
   amountFilled: BigInt!
   amountClaimed: BigInt!
   status: OrderStatus!
-  orderFills: [OrderFill!] @derivedFrom(field: "order")
-}
-
-type OrderFill @entity {
-  id: ID!
-  filler: Account!
-  order: Order!
-  amount: BigInt!
-  exchange: Exchange!
 }
 
 enum OrderType {

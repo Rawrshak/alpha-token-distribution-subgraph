@@ -9,7 +9,6 @@ import {
     Content,
     Account,
     Order,
-    OrderFill,
     Asset,
     AssetBalance
 } from "../generated/schema";
@@ -156,7 +155,7 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
             let receiver = Account.load(event.params.to.toHexString());
             if (receiver == null) {
                 // Add new user account
-                receiver = createAccount(event.params.to);
+                receiver = createAccount(event.params.to, event.block.timestamp);
                 
                 // Increment accounts counter in stats
                 contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
@@ -213,7 +212,7 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
         let receiver = Account.load(event.params.to.toHexString());
         if (receiver == null) {
             // Add new owner
-            receiver = createAccount(event.params.to);
+            receiver = createAccount(event.params.to, event.block.timestamp);
             
             // Increment accounts counter in stats
             contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
@@ -265,7 +264,7 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     // Create Owner account object if it doesn't already exist
     let ownerAcc = Account.load(event.params.order.owner.toHexString());
     if (ownerAcc == null) {
-        ownerAcc = createAccount(event.params.order.owner);
+        ownerAcc = createAccount(event.params.order.owner, event.block.timestamp);
     }
     ownerAcc.ordersCount = ownerAcc.ordersCount.plus(ONE_BI);
     ownerAcc.save();
@@ -285,100 +284,61 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
 }
 
 export function handleOrdersFilled(event: OrdersFilledEvent): void {
-    // let orderFiller = Account.load(event.params.from.toHexString());
-    // if (orderFiller == null) {
-    //     orderFiller = createAccount(event.params.from);
-    // }
+    let taker = Account.load(event.params.from.toHexString());
+    if (taker == null) {
+        taker = createAccount(event.params.from, event.block.timestamp);
+    }
 
-    // // Check asset and token - must already exist
-    // let assetId = getAssetId(event.params.asset.contentAddress.toHexString(), event.params.asset.tokenId.toString());
-    // let asset = Asset.load(assetId)!;
-    // let token = Token.load(event.params.token.toHexString())!;
+    // Check asset - must already exist
+    let assetId = getAssetId(event.params.asset.contentAddress.toHexString(), event.params.asset.tokenId.toString());
+    let asset = Asset.load(assetId)!;
 
-    // // These should be the same lengths, checked by the smart contract
-    // let orderIds = event.params.orderIds;
-    // let orderAmounts = event.params.amounts;
-    // let isBuyOrder = false;
+    // These should be the same lengths, checked by the smart contract
+    let orderIds = event.params.orderIds;
+    let orderAmounts = event.params.amounts;
+    let isBuyOrder = false;
     
-    // let exchange = Exchange.load(event.address.toHexString())!;
+    let exchange = Exchange.load(event.address.toHexString())!;
 
-    // for (let j = 0; j < orderIds.length; ++j) {
-    //     if (orderAmounts[j].equals(ZERO_BI)) {
-    //         continue;
-    //     }
+    for (let j = 0; j < orderIds.length; ++j) {
+        if (orderAmounts[j].equals(ZERO_BI)) {
+            continue;
+        }
 
-    //     let orderId = orderIds[j];
+        let orderId = orderIds[j];
+
+        // Update user data
+        taker.orderFillsCount = taker.orderFillsCount.plus(ONE_BI);
+
+        // Update order status
+        let order = Order.load(orderId.toHexString())!;
+        isBuyOrder = order.type == "Buy" ? true : false;
         
-    //     // create OrderFill object
-    //     let orderFillId = getOrderFillId(orderId.toHexString(), event.transaction.hash.toHexString());
-    //     let orderFill = createOrderFill(orderFillId, orderFiller.id, orderId.toHexString(), token.id, exchange.id);
+        // Add user volume to the maker and the taker
+        let volume = orderAmounts[j].times(order.price);
+        taker.takerVolume = taker.takerVolume.plus(volume);
+        let maker = Account.load(order.owner)!;
+        maker.makerVolume = maker.makerVolume.plus(volume)
+        maker.save();
 
-    //     orderFiller.orderFillsCount = orderFiller.orderFillsCount.plus(ONE_BI);
-    //     orderFiller.save();
+        // Update exchange data
+        exchange.orderFillsCount = exchange.orderFillsCount.plus(ONE_BI);
+        exchange.orderVolume = exchange.orderVolume.plus(volume)
 
-    //     // Update order status
-    //     let order = Order.load(orderId.toHexString())!;
-    //     isBuyOrder = order.type == "Buy" ? true : false;
+        // Update order data
+        order.amountFilled = order.amountFilled.plus(orderAmounts[j]);
+        let amountLeft = order.amountOrdered.minus(order.amountFilled);
+        if (amountLeft == ZERO_BI) {
+            order.status = "Filled";
+        } else {
+            order.status = "PartiallyFilled";
+        }
+        order.save();
+    }
+    taker.save();
+    exchange.save();
 
-    //     // Update exchange data
-    //     exchange.totalOrderFillsCount = exchange.totalOrderFillsCount.plus(ONE_BI);
-    //     if (isBuyOrder) {
-    //         exchange.totalBuyOrderFillsCount = exchange.totalBuyOrderFillsCount.plus(ONE_BI);
-    //     } else {
-    //         exchange.totalSellOrderFillsCount = exchange.totalSellOrderFillsCount.plus(ONE_BI);
-    //     }
-
-    //     // get order data and update orderFill object
-    //     orderFill.amount = orderAmounts[j];
-    //     orderFill.pricePerItem = order.price;
-    //     orderFill.totalPrice = orderAmounts[j].times(order.price);
-    //     orderFill.createdAtTimestamp = event.block.timestamp;
-    //     orderFill.save();
-
-    //     // Add user volume to the buy and the orderFiller
-    //     let orderOwner = Account.load(order.owner)!;
-
-    //     order.amountFilled = order.amountFilled.plus(orderAmounts[j]);
-    //     let amountLeft = order.amountOrdered.minus(order.amountFilled);
-    //     if (amountLeft == ZERO_BI) {
-    //         order.status = "Filled";
-    //         order.filledAtTimestamp = event.block.timestamp;
-    //         orderOwner.filledOrdersCount = orderOwner.filledOrdersCount.plus(ONE_BI);
-    //         orderOwner.activeOrdersCount = orderOwner.activeOrdersCount.minus(ONE_BI);
-    //         if (order.type == "Buy") {
-    //             orderOwner.activeBuyOrders = orderOwner.activeBuyOrders.minus(ONE_BI);
-    //         } else {
-    //             orderOwner.activeSellOrders = orderOwner.activeSellOrders.minus(ONE_BI);
-    //         }
-
-    //         // Update Active orders stats
-    //         exchange.totalActiveOrdersCount = exchange.totalActiveOrdersCount.minus(ONE_BI);
-    //         if (isBuyOrder) {
-    //             exchange.totalActiveBuyOrdersCount = exchange.totalActiveBuyOrdersCount.minus(ONE_BI);
-    //         } else {
-    //             exchange.totalActiveSellOrdersCount = exchange.totalActiveSellOrdersCount.minus(ONE_BI);
-    //         }
-    //     } else {
-    //         order.status = "PartiallyFilled";
-    //     }
-    //     order.save();
-    //     orderOwner.save();
-
-    //     // Note: changetype is for downcasting from Bytes to Address
-    //     // Update daily volume for the order owner
-    //     updateAccountDailyVolume(event, changetype<Address>(orderOwner.address), orderFill.totalPrice, isBuyOrder);
-    // }
-
-    // exchange.save();
-
-    // // Note: changetype is for downcasting from Bytes to Address
-    // updateAccountDailyVolume(event, changetype<Address>(orderFiller.address), event.params.volume, !isBuyOrder);
-
-    // // Add to asset volume
-    // asset.assetVolumeTransacted = asset.assetVolumeTransacted.plus(event.params.totalAssetsAmount);
-    // asset.save();
-
-    // updateTokenVolume(event);
+    // Todo: Count Active Days 
 }
 
 export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
@@ -444,17 +404,17 @@ function createAddressResolver(id: Address): Resolver {
     return resolver;
 }
 
-function createAccount(address: Address): Account {
+function createAccount(address: Address, timestamp: BigInt): Account {
     let account = new Account(address.toHexString());
     account.ordersCount = ZERO_BI;
     account.orderFillsCount = ZERO_BI;
     account.cancelledOrdersCount = ZERO_BI;
     account.claimedOrdersCount = ZERO_BI;
-    account.volume = ZERO_BI;
-    account.volumeAsBuyer = ZERO_BI;
-    account.volumeAsSeller = ZERO_BI;
-    account.daysActive = ZERO_BI;
+    account.makerVolume = ZERO_BI;
+    account.takerVolume = ZERO_BI;
+    account.daysActive = ONE_BI;
     account.uniqueAssetsCount = ZERO_BI;
+    account.lastActiveDate = timestamp;
     account.save();
     return account;
 }
@@ -520,8 +480,7 @@ function createExchange(address: Address): Exchange {
     exchange.orderFillsCount = ZERO_BI;
     exchange.ordersClaimedCount = ZERO_BI;
     exchange.ordersCancelledCount = ZERO_BI;
-    exchange.totalOrderMakerVolume = ZERO_BI;
-    exchange.totalOrderTakerVolume = ZERO_BI;
+    exchange.orderVolume = ZERO_BI;
     exchange.save();
     return exchange;
 }
