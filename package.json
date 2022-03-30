@@ -12,10 +12,10 @@
     "prepare:optimism-kovan": "mustache config/optimism-kovan.json subgraph.template.yaml > subgraph.yaml",
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy:subgraph": "graph deploy gcbsumid/alpha-rawr-distribution subgraph.yaml --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/",
-    "create-local:subgraph": "graph create --node http://localhost:8020/ gcbsumid/alpha-rawr-distribution",
-    "remove-local:subgraph": "graph remove --node http://localhost:8020/ gcbsumid/alpha-rawr-distribution",
-    "deploy-local:subgraph": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 gcbsumid/alpha-rawr-distribution subgraph.yaml"
+    "deploy": "graph deploy gcbsumid/alpha-rawr-distribution subgraph.yaml --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/",
+    "create-local": "graph create --node http://localhost:8020/ gcbsumid/alpha-rawr-distribution",
+    "remove-local": "graph remove --node http://localhost:8020/ gcbsumid/alpha-rawr-distribution",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 gcbsumid/alpha-rawr-distribution subgraph.yaml"
   },
   "dependencies": {
     "@graphprotocol/graph-ts": "^0.22.1"

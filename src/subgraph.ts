@@ -86,6 +86,7 @@ export function handleAddressRegistered(event: AddressRegisteredEvent): void {
             contentStatsMan.contentsCount = ZERO_BI;
             contentStatsMan.assetsCount = ZERO_BI;
             contentStatsMan.accountsCount = ZERO_BI;
+            contentStatsMan.uniqueAssetsCount = ZERO_BI;
             contentStatsMan.save();
         }
     } else {
@@ -109,7 +110,7 @@ export function handleContractsDeployed(event: ContractsDeployedEvent): void {
     }
 
     // Listen for ContentStorage Events
-    let contentManagerContract = ContentManagerContract.bind(event.params.content);
+    let contentManagerContract = ContentManagerContract.bind(event.params.contentManager);
     ContentStorageTemplate.create(contentManagerContract.contentStorage());
 }
 
@@ -167,10 +168,11 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
             let balance = AssetBalance.load(assetBalanceId);
             if (balance == null) {
                 balance = createAssetBalance(assetBalanceId, assetId, receiver.id);
-            }
+                
+                contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
+                contentStatsMan.save();
 
-            // if balance is new or was at zero again previously, increment unique asset count
-            if (balance.amount == ZERO_BI) {
+                // increment for new balance instance for unique asset
                 receiver.uniqueAssetsCount = receiver.uniqueAssetsCount.plus(ONE_BI);
                 receiver.save();
             }
@@ -189,12 +191,6 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
             
             balance.amount = balance.amount.minus(amounts[i]);
             balance.save();
-
-            // if balance drops to 0, decrement unique asset count
-            if (balance.amount == ZERO_BI) {
-                sender.uniqueAssetsCount = sender.uniqueAssetsCount.minus(ONE_BI);
-                sender.save();
-            }
         }
     }
 }
@@ -224,10 +220,11 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
         let balance = AssetBalance.load(assetBalanceId);
         if (balance == null) {
             balance = createAssetBalance(assetBalanceId, assetId, receiver.id);
-        }
-    
-        // if balance is new or was at zero again previously, increment unique asset count
-        if (balance.amount == ZERO_BI) {
+            
+            contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
+            contentStatsMan.save();
+            
+            // increment for new balance instance for unique asset
             receiver.uniqueAssetsCount = receiver.uniqueAssetsCount.plus(ONE_BI);
             receiver.save();
         }
@@ -246,17 +243,16 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
         
         balance.amount = balance.amount.minus(amount);
         balance.save();
-    
-        // if balance drops to 0, decrement unique asset count
-        if (balance.amount == ZERO_BI) {
-            sender.uniqueAssetsCount = sender.uniqueAssetsCount.minus(ONE_BI);
-            sender.save();
-        }
     }
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
     let assetId = getAssetId(event.params.order.asset.contentAddress.toHexString(), event.params.order.asset.tokenId.toString());
+
+    // get the stats manager
+    let content = Content.load(event.params.order.asset.contentAddress.toHexString())!;
+    let factory = ContentFactory.load(content.factory)!;
+    let contentStatsMan = ContentStatisticsManager.load(factory.id)!;
 
     // Create asset object if it doesn't already exist
     let asset = Asset.load(assetId)!;
@@ -265,6 +261,10 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     let ownerAcc = Account.load(event.params.order.owner.toHexString());
     if (ownerAcc == null) {
         ownerAcc = createAccount(event.params.order.owner, event.block.timestamp);
+        
+        // Increment accounts counter in stats
+        contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
+        contentStatsMan.save();
     }
     ownerAcc.ordersCount = ownerAcc.ordersCount.plus(ONE_BI);
     
@@ -292,9 +292,19 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
 }
 
 export function handleOrdersFilled(event: OrdersFilledEvent): void {
+
+    // get the stats manager
+    let content = Content.load(event.params.asset.contentAddress.toHexString())!;
+    let factory = ContentFactory.load(content.factory)!;
+    let contentStatsMan = ContentStatisticsManager.load(factory.id)!;
+
     let taker = Account.load(event.params.from.toHexString());
     if (taker == null) {
         taker = createAccount(event.params.from, event.block.timestamp);
+        
+        // Increment accounts counter in stats
+        contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
+        contentStatsMan.save();
     }
 
     // Check asset - must already exist
@@ -509,6 +519,8 @@ function createExchange(address: Address): Exchange {
     exchange.ordersClaimedCount = ZERO_BI;
     exchange.ordersCancelledCount = ZERO_BI;
     exchange.orderVolume = ZERO_BI;
+    
+    // Need to add this to total users because user active days starts at 1
     exchange.totalUserActiveDays = ZERO_BI;
     exchange.save();
     return exchange;

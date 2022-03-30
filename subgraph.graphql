@@ -23,6 +23,7 @@ type ContentStatisticsManager @entity {
   contentsCount: BigInt!
   assetsCount: BigInt!
   accountsCount: BigInt!
+  uniqueAssetsCount: BigInt!
 }
 
 type Content @entity {
