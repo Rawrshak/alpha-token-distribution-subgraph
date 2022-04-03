@@ -44,6 +44,8 @@ type Account @entity {
   uniqueAssetsCount: BigInt!
   daysActive: BigInt!
   lastActiveDate: BigInt!
+  contractsDeployedCount: BigInt!
+  assetsDeployedCount: BigInt!
 }
 
 type Order @entity {

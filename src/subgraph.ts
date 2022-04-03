@@ -101,6 +101,15 @@ export function handleContractsDeployed(event: ContractsDeployedEvent): void {
     }
     contentStatsMan.save();
 
+    let creator = Account.load(event.transaction.from.toHexString().toLowerCase());
+    if (creator == null) {
+        // Add new user account
+        creator = createAccount(event.transaction.from, event.block.timestamp);
+    }
+    // Increment account's contracts deployed count
+    creator.contractsDeployedCount = creator.contractsDeployedCount.plus(ONE_BI);
+    creator.save();
+
     let content = Content.load(event.params.content.toHexString());
     // Create content object
     if (content == null) {
@@ -135,6 +144,11 @@ export function handleAssetsAdded(event: AssetsAddedEvent): void {
     parent.assetsCount = parent.assetsCount.plus(BigInt.fromI32(tokenIds.length));
     parent.save();
 
+    let creator = Account.load(event.transaction.from.toHexString().toLowerCase())!;
+    // Increment account's contracts deployed count
+    creator.assetsDeployedCount = creator.assetsDeployedCount.plus(BigInt.fromI32(tokenIds.length));
+    creator.save();
+
     // add the number of assets
     let contentStatsMan = ContentStatisticsManager.load(parent.factory)!;
     if (event.transaction.from.toHexString() != ADDRESS_DEV) {
@@ -157,7 +171,7 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
         
         if (event.params.to.toHex() != ADDRESS_ZERO) {
             // receiver exists
-            let receiver = Account.load(event.params.to.toHexString());
+            let receiver = Account.load(event.params.to.toHexString().toLowerCase());
             if (receiver == null) {
                 // Add new user account
                 receiver = createAccount(event.params.to, event.block.timestamp);
@@ -191,7 +205,7 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
 
         if (event.params.from.toHex() != ADDRESS_ZERO) {
             // sender exists
-            let sender = Account.load(event.params.from.toHexString())!;
+            let sender = Account.load(event.params.from.toHexString().toLowerCase())!;
             
             // get/create account balance
             let assetBalanceId = getAssetBalanceId(content.id, sender.id, ids[i].toString());
@@ -213,7 +227,7 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
     let amount = event.params.value;
     if (event.params.to.toHex() != ADDRESS_ZERO) {
         // receiver exists
-        let receiver = Account.load(event.params.to.toHexString());
+        let receiver = Account.load(event.params.to.toHexString().toLowerCase());
         if (receiver == null) {
             // Add new owner
             receiver = createAccount(event.params.to, event.block.timestamp);
@@ -247,7 +261,7 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
   
     if (event.params.from.toHex() != ADDRESS_ZERO) {
         // sender exists
-        let sender = Account.load(event.params.from.toHexString())!;
+        let sender = Account.load(event.params.from.toHexString().toLowerCase())!;
     
         // get/create account balance
         let assetBalanceId = getAssetBalanceId(content.id, sender.id, event.params.id.toString());
@@ -270,7 +284,7 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     let asset = Asset.load(assetId)!;
 
     // Create Owner account object if it doesn't already exist
-    let ownerAcc = Account.load(event.params.order.owner.toHexString());
+    let ownerAcc = Account.load(event.params.order.owner.toHexString().toLowerCase());
     if (ownerAcc == null) {
         ownerAcc = createAccount(event.params.order.owner, event.block.timestamp);
         
@@ -317,7 +331,7 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
     let factory = ContentFactory.load(content.factory)!;
     let contentStatsMan = ContentStatisticsManager.load(factory.id)!;
 
-    let taker = Account.load(event.params.from.toHexString());
+    let taker = Account.load(event.params.from.toHexString().toLowerCase());
     if (taker == null) {
         taker = createAccount(event.params.from, event.block.timestamp);
         
@@ -356,6 +370,7 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
         // Add user volume to the maker and the taker
         let volume = orderAmounts[j].times(order.price);
         taker.takerVolume = taker.takerVolume.plus(volume);
+        taker.save();
         let maker = Account.load(order.owner)!;
         maker.makerVolume = maker.makerVolume.plus(volume)
         maker.save();
@@ -399,7 +414,7 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
 export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
     let orderIds = event.params.orderIds;
     let exchange = Exchange.load(event.address.toHexString())!;
-    let owner = Account.load(event.params.owner.toHexString())!;
+    let owner = Account.load(event.params.owner.toHexString().toLowerCase())!;
 
     for (let j = 0; j < orderIds.length; ++j) {
         let orderId = orderIds[j];
@@ -443,7 +458,7 @@ export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
 export function handleOrdersClaimed(event: OrdersClaimedEvent): void {
     let orderIds = event.params.orderIds;
     let exchange = Exchange.load(event.address.toHexString())!;
-    let owner = Account.load(event.params.owner.toHexString())!;
+    let owner = Account.load(event.params.owner.toHexString().toLowerCase())!;
     for (let j = 0; j < orderIds.length; ++j) {
         let orderId = orderIds[j];
 
@@ -488,7 +503,7 @@ function createAddressResolver(id: Address): Resolver {
 }
 
 function createAccount(address: Address, timestamp: BigInt): Account {
-    let account = new Account(address.toHexString());
+    let account = new Account(address.toHexString().toLowerCase());
     account.ordersCount = ZERO_BI;
     account.orderFillsCount = ZERO_BI;
     account.cancelledOrdersCount = ZERO_BI;
@@ -498,6 +513,8 @@ function createAccount(address: Address, timestamp: BigInt): Account {
     account.uniqueAssetsCount = ZERO_BI;
     account.daysActive = ONE_BI;
     account.lastActiveDate = timestamp;
+    account.contractsDeployedCount = ZERO_BI;
+    account.assetsDeployedCount = ZERO_BI;
     account.save();
     return account;
 }
