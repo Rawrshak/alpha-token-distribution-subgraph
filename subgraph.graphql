@@ -9,7 +9,8 @@ type Exchange @entity {
   orderFillsCount: BigInt!
   ordersClaimedCount: BigInt!
   ordersCancelledCount: BigInt!
-  orderVolume: BigInt!
+  makerVolume: BigInt!
+  takerVolume: BigInt!
   totalUserActiveDays: BigInt!
 }
 

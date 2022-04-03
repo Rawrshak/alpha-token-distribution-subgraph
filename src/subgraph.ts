@@ -1,5 +1,5 @@
 import { log, ByteArray, BigInt, Address, crypto, store } from "@graphprotocol/graph-ts"
-import { ADDRESS_ZERO, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
+import { ADDRESS_ZERO, ADDRESS_DEV, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
 
 import { 
     AddressResolver as Resolver,
@@ -96,7 +96,9 @@ export function handleAddressRegistered(event: AddressRegisteredEvent): void {
 export function handleContractsDeployed(event: ContractsDeployedEvent): void {
     let factory = ContentFactory.load(event.address.toHexString())!;
     let contentStatsMan = ContentStatisticsManager.load(event.address.toHexString())!;
-    contentStatsMan.contentsCount = contentStatsMan.contentsCount.plus(ONE_BI);
+    if (event.transaction.from.toHexString() != ADDRESS_DEV) {
+        contentStatsMan.contentsCount = contentStatsMan.contentsCount.plus(ONE_BI);
+    }
     contentStatsMan.save();
 
     let content = Content.load(event.params.content.toHexString());
@@ -135,7 +137,9 @@ export function handleAssetsAdded(event: AssetsAddedEvent): void {
 
     // add the number of assets
     let contentStatsMan = ContentStatisticsManager.load(parent.factory)!;
-    contentStatsMan.assetsCount = contentStatsMan.assetsCount.plus(BigInt.fromI32(tokenIds.length));
+    if (event.transaction.from.toHexString() != ADDRESS_DEV) {
+        contentStatsMan.assetsCount = contentStatsMan.assetsCount.plus(BigInt.fromI32(tokenIds.length));
+    }
     contentStatsMan.save();
 }
 
@@ -159,8 +163,10 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
                 receiver = createAccount(event.params.to, event.block.timestamp);
                 
                 // Increment accounts counter in stats
-                contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
-                contentStatsMan.save();
+                if (receiver.id != ADDRESS_DEV) {
+                    contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
+                    contentStatsMan.save();
+                }
             }
 
             // get/create account balance
@@ -169,8 +175,10 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
             if (balance == null) {
                 balance = createAssetBalance(assetBalanceId, assetId, receiver.id);
                 
-                contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
-                contentStatsMan.save();
+                if (receiver.id != ADDRESS_DEV) {
+                    contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
+                    contentStatsMan.save();
+                }
 
                 // increment for new balance instance for unique asset
                 receiver.uniqueAssetsCount = receiver.uniqueAssetsCount.plus(ONE_BI);
@@ -211,8 +219,10 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
             receiver = createAccount(event.params.to, event.block.timestamp);
             
             // Increment accounts counter in stats
-            contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
-            contentStatsMan.save();
+            if (receiver.id != ADDRESS_DEV) {
+                contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
+                contentStatsMan.save();
+            }
         }
     
         // get/create account balance
@@ -221,8 +231,10 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
         if (balance == null) {
             balance = createAssetBalance(assetBalanceId, assetId, receiver.id);
             
-            contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
-            contentStatsMan.save();
+            if (receiver.id != ADDRESS_DEV) {
+                contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
+                contentStatsMan.save();
+            }
             
             // increment for new balance instance for unique asset
             receiver.uniqueAssetsCount = receiver.uniqueAssetsCount.plus(ONE_BI);
@@ -263,8 +275,10 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
         ownerAcc = createAccount(event.params.order.owner, event.block.timestamp);
         
         // Increment accounts counter in stats
-        contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
-        contentStatsMan.save();
+        if (ownerAcc.id != ADDRESS_DEV) {
+            contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
+            contentStatsMan.save();
+        }
     }
     ownerAcc.ordersCount = ownerAcc.ordersCount.plus(ONE_BI);
     
@@ -278,13 +292,18 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
     order.save();
 
     // Update exchange data
-    exchange.ordersCount = exchange.ordersCount.plus(ONE_BI);
+    if (ownerAcc.id != ADDRESS_DEV) {
+        exchange.ordersCount = exchange.ordersCount.plus(ONE_BI);
+    }
 
     // Add new user active day
     if (isNewDay(ownerAcc.lastActiveDate, event.block.timestamp)) {
         ownerAcc.daysActive = ownerAcc.daysActive.plus(ONE_BI);
         ownerAcc.lastActiveDate = event.block.timestamp;
-        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        
+        if (ownerAcc.id != ADDRESS_DEV) {
+            exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        }
     }
     
     ownerAcc.save();
@@ -303,8 +322,10 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
         taker = createAccount(event.params.from, event.block.timestamp);
         
         // Increment accounts counter in stats
-        contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
-        contentStatsMan.save();
+        if (taker.id != ADDRESS_DEV) {
+            contentStatsMan.accountsCount = contentStatsMan.accountsCount.plus(ONE_BI);
+            contentStatsMan.save();
+        }
     }
 
     // Check asset - must already exist
@@ -340,8 +361,15 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
         maker.save();
 
         // Update exchange data
-        exchange.orderFillsCount = exchange.orderFillsCount.plus(ONE_BI);
-        exchange.orderVolume = exchange.orderVolume.plus(volume)
+        if (taker.id != ADDRESS_DEV) {
+            exchange.orderFillsCount = exchange.orderFillsCount.plus(ONE_BI);
+            exchange.takerVolume = exchange.takerVolume.plus(volume);
+            exchange.save();
+        }
+        if (maker.id != ADDRESS_DEV) {
+            exchange.makerVolume = exchange.makerVolume.plus(volume);
+            exchange.save();
+        }
 
         // Update order data
         order.amountFilled = order.amountFilled.plus(orderAmounts[j]);
@@ -358,13 +386,14 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
     if (isNewDay(taker.lastActiveDate, event.block.timestamp)) {
         taker.daysActive = taker.daysActive.plus(ONE_BI);
         taker.lastActiveDate = event.block.timestamp;
-        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        
+        if (taker.id != ADDRESS_DEV) {
+            exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        }
     }
 
     taker.save();
     exchange.save();
-
-    // Todo: Count Active Days 
 }
 
 export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
@@ -382,7 +411,10 @@ export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
         // if there is an unclaimed amount still, we add a claim order stat
         if (order.amountClaimed != order.amountFilled) {
             owner.claimedOrdersCount = owner.claimedOrdersCount.plus(ONE_BI);
-            exchange.ordersClaimedCount = exchange.ordersClaimedCount.plus(ONE_BI);
+            
+            if (owner.id != ADDRESS_DEV) {
+                exchange.ordersClaimedCount = exchange.ordersClaimedCount.plus(ONE_BI);
+            }
         }
 
         order.amountClaimed = order.amountFilled;
@@ -393,13 +425,18 @@ export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
     if (isNewDay(owner.lastActiveDate, event.block.timestamp)) {
         owner.daysActive = owner.daysActive.plus(ONE_BI);
         owner.lastActiveDate = event.block.timestamp;
-        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        
+        if (owner.id != ADDRESS_DEV) {
+            exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        }
     }
     
     owner.cancelledOrdersCount = owner.cancelledOrdersCount.plus(BigInt.fromI32(orderIds.length));
     owner.save();
 
-    exchange.ordersCancelledCount = exchange.ordersCancelledCount.plus(BigInt.fromI32(orderIds.length));
+    if (owner.id != ADDRESS_DEV) {
+        exchange.ordersCancelledCount = exchange.ordersCancelledCount.plus(BigInt.fromI32(orderIds.length));
+    }
     exchange.save();
 }
 
@@ -421,9 +458,12 @@ export function handleOrdersClaimed(event: OrdersClaimedEvent): void {
         }
 
         if (order.amountFilled != order.amountClaimed) {          
-          order.amountClaimed = order.amountFilled;
-          owner.claimedOrdersCount = owner.claimedOrdersCount.plus(ONE_BI);
-          exchange.ordersClaimedCount = exchange.ordersClaimedCount.plus(ONE_BI);
+            order.amountClaimed = order.amountFilled;
+            owner.claimedOrdersCount = owner.claimedOrdersCount.plus(ONE_BI);
+          
+            if (owner.id != ADDRESS_DEV) {
+                exchange.ordersClaimedCount = exchange.ordersClaimedCount.plus(ONE_BI);
+            }
         }
         order.save();
     }
@@ -432,7 +472,9 @@ export function handleOrdersClaimed(event: OrdersClaimedEvent): void {
     if (isNewDay(owner.lastActiveDate, event.block.timestamp)) {
         owner.daysActive = owner.daysActive.plus(ONE_BI);
         owner.lastActiveDate = event.block.timestamp;
-        exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        if (owner.id != ADDRESS_DEV) {
+            exchange.totalUserActiveDays = exchange.totalUserActiveDays.plus(ONE_BI);
+        }
     }
     
     owner.save();
@@ -518,7 +560,8 @@ function createExchange(address: Address): Exchange {
     exchange.orderFillsCount = ZERO_BI;
     exchange.ordersClaimedCount = ZERO_BI;
     exchange.ordersCancelledCount = ZERO_BI;
-    exchange.orderVolume = ZERO_BI;
+    exchange.makerVolume = ZERO_BI;
+    exchange.takerVolume = ZERO_BI;
     
     // Need to add this to total users because user active days starts at 1
     exchange.totalUserActiveDays = ZERO_BI;
