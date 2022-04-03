@@ -1,5 +1,5 @@
 import { log, ByteArray, BigInt, Address, crypto, store } from "@graphprotocol/graph-ts"
-import { ADDRESS_ZERO, ADDRESS_DEV, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
+import { SNAPSHOT_TIMESTAMP, ADDRESS_ZERO, ADDRESS_DEV, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
 
 import { 
     AddressResolver as Resolver,
@@ -94,6 +94,10 @@ export function handleAddressRegistered(event: AddressRegisteredEvent): void {
     }
 }
 export function handleContractsDeployed(event: ContractsDeployedEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+
     let factory = ContentFactory.load(event.address.toHexString())!;
     let contentStatsMan = ContentStatisticsManager.load(event.address.toHexString())!;
     if (event.transaction.from.toHexString() != ADDRESS_DEV) {
@@ -127,6 +131,10 @@ export function handleContractsDeployed(event: ContractsDeployedEvent): void {
 
 // ContentStorage Events
 export function handleAssetsAdded(event: AssetsAddedEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+
     // make sure parent content contract has been loaded
     let parent = Content.load(event.params.parent.toHexString())!;
     let tokenIds = event.params.tokenIds;
@@ -158,6 +166,10 @@ export function handleAssetsAdded(event: AssetsAddedEvent): void {
 }
 
 export function handleTransferBatch(event: TransferBatchEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+
     //TransferBatch(address operator, address from, address to, uint256[] ids, u as TransferSingleEventint256[] values)
     // transfer multiple assets
     let content = Content.load(event.address.toHexString())!;
@@ -218,6 +230,10 @@ export function handleTransferBatch(event: TransferBatchEvent): void {
 }
 
 export function handleTransferSingle(event: TransferSingleEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+    
     let content = Content.load(event.address.toHexString())!;
     let contentStatsMan = ContentStatisticsManager.load(content.factory)!;
   
@@ -273,6 +289,10 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
 }
 
 export function handleOrderPlaced(event: OrderPlacedEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+
     let assetId = getAssetId(event.params.order.asset.contentAddress.toHexString(), event.params.order.asset.tokenId.toString());
 
     // get the stats manager
@@ -325,6 +345,9 @@ export function handleOrderPlaced(event: OrderPlacedEvent): void {
 }
 
 export function handleOrdersFilled(event: OrdersFilledEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
 
     // get the stats manager
     let content = Content.load(event.params.asset.contentAddress.toHexString())!;
@@ -412,6 +435,10 @@ export function handleOrdersFilled(event: OrdersFilledEvent): void {
 }
 
 export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+    
     let orderIds = event.params.orderIds;
     let exchange = Exchange.load(event.address.toHexString())!;
     let owner = Account.load(event.params.owner.toHexString().toLowerCase())!;
@@ -456,6 +483,10 @@ export function handleOrdersDeleted(event: OrdersDeletedEvent): void {
 }
 
 export function handleOrdersClaimed(event: OrdersClaimedEvent): void {
+    if (isTransactionInvalid(event.block.timestamp)) {
+        return;
+    }
+    
     let orderIds = event.params.orderIds;
     let exchange = Exchange.load(event.address.toHexString())!;
     let owner = Account.load(event.params.owner.toHexString().toLowerCase())!;
@@ -552,6 +583,10 @@ function isNewDay(lastActiveTimestamp: BigInt, currentTimestamp: BigInt): boolea
         return true;
     }
     return false;
+}
+
+function isTransactionInvalid(transactionTimestamp: BigInt): boolean {
+    return transactionTimestamp > SNAPSHOT_TIMESTAMP;
 }
 
 function getAssetId(content: string, tokenId: string): string {
