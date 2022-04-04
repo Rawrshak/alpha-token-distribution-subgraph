@@ -6,13 +6,16 @@ import {
     ZERO_BI,
     SECONDS_PER_DAY,
     WEEKLY_EVENTS_ADDRESS,
+    WEEK2_BONUS_CONTRACT_ADDRESS,
     Week1TokenIds,
     Week2TokenIds,
     Week3TokenIds,
     CorrectTokenIds,
     WEEK_1_END_TIMESTAMP,
     WEEK_2_END_TIMESTAMP,
-    WEEK_3_END_TIMESTAMP
+    WEEK_3_END_TIMESTAMP,
+    Week2BonusTokenId,
+    Week3BonusTokenId
 } from "./constants";
 import { log, ByteArray, BigInt, Address, crypto, store } from "@graphprotocol/graph-ts"
 
@@ -49,6 +52,58 @@ export function updateWeeklyPoints(week: i32, userId: string, contentStatsManId:
         } else {
             // subtract the disqualified user's points 
             updatePointsTotal(contentStatsManId, week, weeklyEvent.points, false);
+            weeklyEvent.disqualified = true;
+            weeklyEvent.points = ZERO_BI; 
+        }
+        weeklyEvent.save();
+    }
+}
+
+export function checkWeek2Bonus(userId: string, contentStatsManId: string, content: String, tokenId: BigInt, timestamp: BigInt, assetBalance: BigInt, isAssetNewlyAcquired: boolean): void {
+    if (content == WEEK2_BONUS_CONTRACT_ADDRESS && tokenId == Week2BonusTokenId && isBeforeWeeklyDeadline(timestamp, 2)) {
+        let weeklyEvent = WeeklyEventParticipation.load(getWeeklyEventId(userId, 2));
+        if (weeklyEvent == null) {
+            weeklyEvent = createWeeklyEvent(userId, 2);
+            let user = Account.load(userId)!;
+            user.week2 = weeklyEvent.id;
+            user.save();
+
+            updatePointsTotal(contentStatsManId, 2, weeklyEvent.points, true);
+        }
+
+        if (assetBalance == ONE_BI) {
+            if (!weeklyEvent.disqualified && isAssetNewlyAcquired) { 
+                weeklyEvent.bonus = true;
+            }
+        } else {
+            // subtract the disqualified user's points 
+            updatePointsTotal(contentStatsManId, 2, weeklyEvent.points, false);
+            weeklyEvent.disqualified = true;
+            weeklyEvent.points = ZERO_BI; 
+        }
+        weeklyEvent.save();
+    }
+}
+
+export function checkWeek3Bonus(userId: string, contentStatsManId: string, content: String, tokenId: BigInt, timestamp: BigInt, assetBalance: BigInt, isAssetNewlyAcquired: boolean): void {
+    if (content == WEEKLY_EVENTS_ADDRESS && tokenId == Week3BonusTokenId && isBeforeWeeklyDeadline(timestamp, 3)) {
+        let weeklyEvent = WeeklyEventParticipation.load(getWeeklyEventId(userId, 3));
+        if (weeklyEvent == null) {
+            weeklyEvent = createWeeklyEvent(userId, 3);
+            let user = Account.load(userId)!;
+            user.week3 = weeklyEvent.id;
+            user.save();
+
+            updatePointsTotal(contentStatsManId, 3, weeklyEvent.points, true);
+        }
+
+        if (assetBalance == ONE_BI) {
+            if (!weeklyEvent.disqualified && isAssetNewlyAcquired) { 
+                weeklyEvent.bonus = true;
+            }
+        } else {
+            // subtract the disqualified user's points 
+            updatePointsTotal(contentStatsManId, 3, weeklyEvent.points, false);
             weeklyEvent.disqualified = true;
             weeklyEvent.points = ZERO_BI; 
         }

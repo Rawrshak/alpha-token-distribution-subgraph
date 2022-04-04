@@ -1,6 +1,8 @@
 import { log, ByteArray, BigInt, Address, crypto, store } from "@graphprotocol/graph-ts"
 import { SNAPSHOT_TIMESTAMP, ADDRESS_ZERO, ADDRESS_DEV, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
 import {
+    checkWeek2Bonus,
+    checkWeek3Bonus,
     updateWeeklyPoints
 } from "./poinstManager";
 
@@ -290,6 +292,12 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
         
         // Week 3 Events
         updateWeeklyPoints(3, receiver.id, contentStatsMan.id, content.id, event.params.id, event.block.timestamp, balance.amount, isAssetNewlyAcquired);
+
+        // check week 2 bonus
+        checkWeek2Bonus(receiver.id, contentStatsMan.id, content.id, event.params.id, event.block.timestamp, balance.amount, isAssetNewlyAcquired);
+
+        // check week 3 bonus
+        checkWeek3Bonus(receiver.id, contentStatsMan.id, content.id, event.params.id, event.block.timestamp, balance.amount, isAssetNewlyAcquired);
     } 
   
     if (event.params.from.toHex() != ADDRESS_ZERO) {
