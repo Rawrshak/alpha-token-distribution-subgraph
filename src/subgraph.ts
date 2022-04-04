@@ -1,5 +1,8 @@
 import { log, ByteArray, BigInt, Address, crypto, store } from "@graphprotocol/graph-ts"
 import { SNAPSHOT_TIMESTAMP, ADDRESS_ZERO, ADDRESS_DEV, ONE_BI, ZERO_BI, SECONDS_PER_DAY } from "./constants";
+import {
+    updateWeeklyPoints
+} from "./poinstManager";
 
 import { 
     AddressResolver as Resolver,
@@ -87,6 +90,9 @@ export function handleAddressRegistered(event: AddressRegisteredEvent): void {
             contentStatsMan.assetsCount = ZERO_BI;
             contentStatsMan.accountsCount = ZERO_BI;
             contentStatsMan.uniqueAssetsCount = ZERO_BI;
+            contentStatsMan.w1TotalPoints = ZERO_BI;
+            contentStatsMan.w2TotalPoints = ZERO_BI;
+            contentStatsMan.w3TotalPoints = ZERO_BI;
             contentStatsMan.save();
         }
     } else {
@@ -258,8 +264,10 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
         // get/create account balance
         let assetBalanceId = getAssetBalanceId(content.id, receiver.id, event.params.id.toString());
         let balance = AssetBalance.load(assetBalanceId);
+        let isAssetNewlyAcquired = false;
         if (balance == null) {
             balance = createAssetBalance(assetBalanceId, assetId, receiver.id);
+            isAssetNewlyAcquired = true;
             
             if (receiver.id != ADDRESS_DEV) {
                 contentStatsMan.uniqueAssetsCount = contentStatsMan.uniqueAssetsCount.plus(ONE_BI);
@@ -273,6 +281,15 @@ export function handleTransferSingle(event: TransferSingleEvent): void {
     
         balance.amount = balance.amount.plus(amount);
         balance.save();
+
+        // Week 1 Events
+        updateWeeklyPoints(1, receiver.id, contentStatsMan.id, content.id, event.params.id, event.block.timestamp, balance.amount, isAssetNewlyAcquired);
+        
+        // Week 2 Events
+        updateWeeklyPoints(2, receiver.id, contentStatsMan.id, content.id, event.params.id, event.block.timestamp, balance.amount, isAssetNewlyAcquired);
+        
+        // Week 3 Events
+        updateWeeklyPoints(3, receiver.id, contentStatsMan.id, content.id, event.params.id, event.block.timestamp, balance.amount, isAssetNewlyAcquired);
     } 
   
     if (event.params.from.toHex() != ADDRESS_ZERO) {
@@ -546,6 +563,9 @@ function createAccount(address: Address, timestamp: BigInt): Account {
     account.lastActiveDate = timestamp;
     account.contractsDeployedCount = ZERO_BI;
     account.assetsDeployedCount = ZERO_BI;
+    account.week1 = null;
+    account.week2 = null;
+    account.week3 = null;
     account.save();
     return account;
 }

@@ -25,6 +25,9 @@ type ContentStatisticsManager @entity {
   assetsCount: BigInt!
   accountsCount: BigInt!
   uniqueAssetsCount: BigInt!
+  w1TotalPoints: BigInt!
+  w2TotalPoints: BigInt!
+  w3TotalPoints: BigInt!
 }
 
 type Content @entity {
@@ -46,6 +49,17 @@ type Account @entity {
   lastActiveDate: BigInt!
   contractsDeployedCount: BigInt!
   assetsDeployedCount: BigInt!
+  week1: WeeklyEventParticipation
+  week2: WeeklyEventParticipation
+  week3: WeeklyEventParticipation
+}
+
+type WeeklyEventParticipation @entity {
+    id: ID!
+    week: Int!
+    points: BigInt!
+    bonus: Boolean! 
+    disqualified: Boolean!
 }
 
 type Order @entity {
